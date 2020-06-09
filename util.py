@@ -77,10 +77,10 @@ def visualize_regression(image, gt):
     cv2.imshow("image", image)
     cv2.waitKey(0)   
 
-def draw_points(x, y, image):
-    color_index = 0
+def draw_points(x, y, image, color=None):
+    color_index = color or 0
     for i, j in zip(x, y):
-        color_index += 1
+        color_index += (color is None)
         if color_index > 12:
             color_index = 12
         for index in range(len(i)):
