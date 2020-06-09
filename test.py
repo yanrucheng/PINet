@@ -4,6 +4,7 @@
 ##
 #############################################################################################################
 
+import argparse, os, glob
 import cv2
 import json
 import torch
@@ -20,11 +21,51 @@ p = Parameters()
 ###############################################################
 ##
 ## Training
-## 
+##
 ###############################################################
-def Testing():
+class PINet_Tester:
+
+    def __init__(self):
+        # Get dataset
+        self.loader = Generator()
+
+        # Get Agent
+        if p.model_path == "":
+            lane_agent = agent.Agent()
+        else:
+            lane_agent = agent.Agent()
+            lane_agent.load_weights(640, "tensor(0.2298)")
+
+        # Check GPU
+        print('Setup GPU mode')
+        if torch.cuda.is_available():
+            lane_agent.cuda()
+
+        # testing
+        print('Testing loop')
+        lane_agent.evaluate_mode()
+
+        self.lane_agent = lane_agent
+
+    def test_image(self, filename, output_filename=None):
+        test_image = cv2.imread(filename)
+        assert test_image is not None, 'Test image {} not Found.'.format(filename)
+        test_image = cv2.resize(test_image, (512,256))/255.0
+        test_image = np.rollaxis(test_image, axis=2, start=0)
+        _, _, ti = test(self.lane_agent, np.array([test_image]))
+
+        folder, filename_ = os.path.split(filename)
+        name, ext = os.path.splitext(filename_)
+        output_filename = output_filename or os.path.join(folder, name+'_output'+ext)
+
+        cv2.imwrite(output_filename, ti[0])
+
+    def test_video(self, ):
+        pass
+
+def Testing(filename=None):
     print('Testing')
-    
+
     #########################################################################
     ## Get dataset
     #########################################################################
@@ -53,11 +94,11 @@ def Testing():
     print('Testing loop')
     lane_agent.evaluate_mode()
 
-    if p.mode == 0 : # check model with test data 
+    if p.mode == 0 : # check model with test data
         for _, _, _, test_image in loader.Generate():
             _, _, ti = test(lane_agent, np.array([test_image]))
             cv2.imshow("test", ti[0])
-            cv2.waitKey(0) 
+            cv2.waitKey(0)
 
     elif p.mode == 1: # check model with video
         cap = cv2.VideoCapture("video_path")
@@ -66,7 +107,7 @@ def Testing():
             prevTime = time.time()
             frame = cv2.resize(frame, (512,256))/255.0
             frame = np.rollaxis(frame, axis=2, start=0)
-            _, _, ti = test(lane_agent, np.array([frame])) 
+            _, _, ti = test(lane_agent, np.array([frame]))
             curTime = time.time()
             sec = curTime - prevTime
             fps = 1/(sec)
@@ -79,12 +120,20 @@ def Testing():
         cv2.destroyAllWindows()
 
     elif p.mode == 2: # check model with a picture
-        test_image = cv2.imread(p.test_root_url+"clips/0530/1492720840345996040_0/20.jpg")
+        #test_image = cv2.imread(p.test_root_url+"clips/0530/1492720840345996040_0/20.jpg")
+        test_image = cv2.imread(filename)
+        assert test_image is not None, 'Test image {} not Found.'.format(filename)
         test_image = cv2.resize(test_image, (512,256))/255.0
         test_image = np.rollaxis(test_image, axis=2, start=0)
         _, _, ti = test(lane_agent, np.array([test_image]))
-        cv2.imshow("test", ti[0])
-        cv2.waitKey(0)   
+
+        folder, filename_ = os.path.split(filename)
+        name, ext = os.path.splitext(filename_)
+        output_filename = os.path.join(folder, name+'_output.'+ext)
+
+        cv2.imwrite(output_filename, ti[0])
+        #cv2.imshow("test", ti[0])
+        #cv2.waitKey(0)
 
     elif p.mode == 3: #evaluation
         print("evaluate")
@@ -147,7 +196,7 @@ def find_target(x, y, target_h, ratio_w, ratio_h):
                         temp_x.append(l)
         out_x.append(temp_x)
         out_y.append(temp_y)
-    
+
     return out_x, out_y
 
 ############################################################################
@@ -175,7 +224,7 @@ def test(lane_agent, test_images, thresh = p.threshold_point):
 
     result = lane_agent.predict_lanes_test(test_images)
     confidences, offsets, instances = result[-1]
-    
+
     num_batch = len(test_images)
 
     out_x = []
@@ -187,14 +236,14 @@ def test(lane_agent, test_images, thresh = p.threshold_point):
         image = deepcopy(test_images[i])
         image =  np.rollaxis(image, axis=2, start=0)
         image =  np.rollaxis(image, axis=2, start=0)*255.0
-        image = image.astype(np.uint8).copy()
+        image = image.astype(np.uint8) #.copy()
 
         confidence = confidences[i].view(p.grid_y, p.grid_x).cpu().data.numpy()
 
         offset = offsets[i].cpu().data.numpy()
         offset = np.rollaxis(offset, axis=2, start=0)
         offset = np.rollaxis(offset, axis=2, start=0)
-        
+
         instance = instances[i].cpu().data.numpy()
         instance = np.rollaxis(instance, axis=2, start=0)
         instance = np.rollaxis(instance, axis=2, start=0)
@@ -204,14 +253,14 @@ def test(lane_agent, test_images, thresh = p.threshold_point):
 
         # eliminate fewer points
         in_x, in_y = eliminate_fewer_points(raw_x, raw_y)
-                
-        # sort points along y 
-        in_x, in_y = util.sort_along_y(in_x, in_y)  
-        in_x, in_y = eliminate_out(in_x, in_y, confidence, deepcopy(image))
+
+        # sort points along y
+        in_x, in_y = util.sort_along_y(in_x, in_y)
+        in_x, in_y = eliminate_out(in_x, in_y, confidence) #, deepcopy(image))
         in_x, in_y = util.sort_along_y(in_x, in_y)
         in_x, in_y = eliminate_fewer_points(in_x, in_y)
 
-        result_image = util.draw_points(in_x, in_y, deepcopy(image))
+        result_image = util.draw_points(in_x, in_y, image) #deepcopy(image))
 
         out_x.append(in_x)
         out_y.append(in_y)
@@ -228,27 +277,27 @@ def eliminate_out(sorted_x, sorted_y, confidence, image = None):
 
     for lane_x, lane_y in zip(sorted_x, sorted_y):
 
-        lane_x_along_y = np.array(deepcopy(lane_x))
-        lane_y_along_y = np.array(deepcopy(lane_y))
+        lane_x_along_y = np.array(lane_x) # deepcopy(lane_x))
+        lane_y_along_y = np.array(lane_y) # deepcopy(lane_y))
 
         ind = np.argsort(lane_x_along_y, axis=0)
         lane_x_along_x = np.take_along_axis(lane_x_along_y, ind, axis=0)
         lane_y_along_x = np.take_along_axis(lane_y_along_y, ind, axis=0)
-        
+
         if lane_y_along_x[0] > lane_y_along_x[-1]: #if y of left-end point is higher than right-end
             starting_points = [(lane_x_along_y[0], lane_y_along_y[0]), (lane_x_along_y[1], lane_y_along_y[1]), (lane_x_along_y[2], lane_y_along_y[2]),
                                 (lane_x_along_x[0], lane_y_along_x[0]), (lane_x_along_x[1], lane_y_along_x[1]), (lane_x_along_x[2], lane_y_along_x[2])] # some low y, some left/right x
         else:
             starting_points = [(lane_x_along_y[0], lane_y_along_y[0]), (lane_x_along_y[1], lane_y_along_y[1]), (lane_x_along_y[2], lane_y_along_y[2]),
-                                (lane_x_along_x[-1], lane_y_along_x[-1]), (lane_x_along_x[-2], lane_y_along_x[-2]), (lane_x_along_x[-3], lane_y_along_x[-3])] # some low y, some left/right x            
-    
+                                (lane_x_along_x[-1], lane_y_along_x[-1]), (lane_x_along_x[-2], lane_y_along_x[-2]), (lane_x_along_x[-3], lane_y_along_x[-3])] # some low y, some left/right x
+
         temp_x = []
         temp_y = []
         for start_point in starting_points:
-            temp_lane_x, temp_lane_y = generate_cluster(start_point, lane_x, lane_y, image)
+            temp_lane_x, temp_lane_y = generate_cluster(start_point, lane_x, lane_y) # , image)
             temp_x.append(temp_lane_x)
             temp_y.append(temp_lane_y)
-        
+
         max_lenght_x = None
         max_lenght_y = None
         max_lenght = 0
@@ -272,19 +321,19 @@ def generate_cluster(start_point, lane_x, lane_y, image = None):
     point = start_point
     while True:
         points = util.get_closest_upper_point(lane_x, lane_y, point, 3)
-         
+
         max_num = -1
         max_point = None
 
         if len(points) == 0:
             break
         if len(points) < 3:
-            for i in points: 
+            for i in points:
                 cluster_x.append(i[0])
-                cluster_y.append(i[1])                
+                cluster_y.append(i[1])
             break
-        for i in points: 
-            num, shortest = util.get_num_along_point(lane_x, lane_y, point, i, image)
+        for i in points:
+            num, shortest = util.get_num_along_point(lane_x, lane_y, point, i) # , image)
             if max_num < num:
                 max_num = num
                 max_point = i
@@ -293,7 +342,7 @@ def generate_cluster(start_point, lane_x, lane_y, image = None):
         cluster_x.append(max_point[0])
         cluster_y.append(max_point[1])
         point = max_point
-        
+
         if len(points) == 1 or max_num < total_remain/5:
             break
 
@@ -317,9 +366,9 @@ def remove_same_point(x, y):
                     continue
                 else:
                     temp_x.append(lane_x[i])
-                    temp_y.append(lane_y[i])     
-        out_x.append(temp_x)  
-        out_y.append(temp_y)  
+                    temp_y.append(lane_y[i])
+        out_x.append(temp_x)
+        out_y.append(temp_y)
     return out_x, out_y
 
 ############################################################################
@@ -332,8 +381,8 @@ def eliminate_fewer_points(x, y):
     for i, j in zip(x, y):
         if len(i)>2:
             out_x.append(i)
-            out_y.append(j)     
-    return out_x, out_y   
+            out_y.append(j)
+    return out_x, out_y
 
 ############################################################################
 ## generate raw output
@@ -378,11 +427,36 @@ def generate_result(confidance, offsets,instance, thresh):
                 if flag == 0:
                     lane_feature.append(feature[i])
                     x.append([])
-                    x[index].append(point_x) 
+                    x[index].append(point_x)
                     y.append([])
                     y[index].append(point_y)
-                
+
     return x, y
 
+def arg_parser_setup():
+    parser = argparse.ArgumentParser(description='Test PINet')
+
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-f', '--filename', help='Input test case file absolute path. E.g. /Users/ben/...')
+    group.add_argument('-d', '--directory', help='Input test case file absolute path. E.g. /Users/ben/...')
+    args = parser.parse_args()
+
+    return parser.parse_args()
+
 if __name__ == '__main__':
-    Testing()
+    args = arg_parser_setup()
+    tester = PINet_Tester()
+    if args.directory:
+        fs = [f for f in glob.glob(os.path.join(args.directory, '*.bmp')) if 'output' not in f]
+        for i, f in enumerate(fs, 1):
+            print('Processing {}/{} image'.format(i, len(fs)))
+            a, b = os.path.split(f)
+            output_directory = a + ' output'
+            output_filename = os.path.join(output_directory, b)
+            if not os.path.exists(output_directory):
+                os.makedirs(output_directory)
+            tester.test_image(f, output_filename)
+    elif args.filename:
+        #filename = '/Users/ben/Downloads/hk_road01.jpg'
+        tester.test_image(args.filename)
