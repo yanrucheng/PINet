@@ -14,7 +14,7 @@ from hourglass_network import lane_detection_network
 from torch.autograd import Function as F
 from parameters import Parameters
 import math
-import util
+import util, os
 
 ############################################################
 ##
@@ -38,7 +38,7 @@ class Agent(nn.Module):
         self.current_epoch = 0
 
     def count_parameters(self, model):
-	    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
     def setup_optimizer(self):
         self.lane_detection_optim = torch.optim.Adam(self.lane_detection_network.parameters(),
@@ -148,14 +148,17 @@ class Agent(nn.Module):
 
         # convert numpy array to torch tensor
         ground_truth_point = torch.from_numpy(ground_truth_point).float()
-        ground_truth_point = Variable(ground_truth_point).cuda()
+        ground_truth_point = Variable(ground_truth_point)
+        #ground_truth_point = Variable(ground_truth_point).cuda()
         ground_truth_point.requires_grad=False
 
-        ground_binary = torch.LongTensor(ground_binary.tolist()).cuda()
+        ground_binary = torch.LongTensor(ground_binary.tolist())
+        #ground_binary = torch.LongTensor(ground_binary.tolist()).cuda()
         ground_binary.requires_grad=False
 
         ground_truth_instance = torch.from_numpy(ground_truth_instance).float()
-        ground_truth_instance = Variable(ground_truth_instance).cuda()
+        ground_truth_instance = Variable(ground_truth_instance)
+        #ground_truth_instance = Variable(ground_truth_instance).cuda()
         ground_truth_instance.requires_grad=False
 
         #util.visualize_gt(ground_truth_point[0], ground_truth_instance[0], inputs[0])
@@ -242,9 +245,9 @@ class Agent(nn.Module):
             self.current_epoch = epoch
             if epoch>0 and (epoch == 1000):
                 self.p.constant_lane_loss += 0.5
-		self.p.constant_nonexist += 0.5
-	        self.p.l_rate /= 2.0
-	        self.setup_optimizer()
+                self.p.constant_nonexist += 0.5
+                self.p.l_rate /= 2.0
+                self.setup_optimizer()
 
         return lane_detection_loss
 
@@ -253,7 +256,8 @@ class Agent(nn.Module):
     #####################################################
     def predict_lanes(self, inputs):
         inputs = torch.from_numpy(inputs).float() 
-        inputs = Variable(inputs).cuda()
+        inputs = Variable(inputs)
+        #inputs = Variable(inputs).cuda()
 
         return self.lane_detection_network(inputs)
 
@@ -262,7 +266,8 @@ class Agent(nn.Module):
     #####################################################
     def predict_lanes_test(self, inputs):
         inputs = torch.from_numpy(inputs).float() 
-        inputs = Variable(inputs).cuda()
+        inputs = Variable(inputs)
+        #inputs = Variable(inputs).cuda()
 
         return self.lane_detection_network(inputs)
 
@@ -282,14 +287,19 @@ class Agent(nn.Module):
     ## Setup GPU computation
     #####################################################                                                
     def cuda(self):
-        self.lane_detection_network.cuda()
+        self.lane_detection_network
+        #self.lane_detection_network.cuda()
 
     #####################################################
     ## Load save file
     #####################################################
     def load_weights(self, epoch, loss):
         self.lane_detection_network.load_state_dict(
-            torch.load(self.p.model_path+str(epoch)+'_'+str(loss)+'_'+'lane_detection_network.pkl'),False
+            torch.load(
+                '{}{}_{}_lane_detection_network.pkl'.format(
+                    self.p.model_path, epoch, loss
+                ), map_location='cpu'
+            ), False
         )
 
     #####################################################

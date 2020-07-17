@@ -27,7 +27,7 @@ class PINet_Tester:
 
     def __init__(self):
         # Get dataset
-        # self.loader = Generator()
+        self.loader = Generator()
 
         # Get Agent
         if p.model_path == "":
@@ -47,19 +47,18 @@ class PINet_Tester:
 
         self.lane_agent = lane_agent
 
-    def test_image(self, filename, output_filename=None, threshold=0.81, color=None):
+    def test_image(self, filename, output_filename=None):
         test_image = cv2.imread(filename)
         assert test_image is not None, 'Test image {} not Found.'.format(filename)
         test_image = cv2.resize(test_image, (512,256))/255.0
         test_image = np.rollaxis(test_image, axis=2, start=0)
-        _, _, ti = test(self.lane_agent, np.array([test_image]), thresh=threshold, color=color)
+        _, _, ti = test(self.lane_agent, np.array([test_image]))
 
         folder, filename_ = os.path.split(filename)
         name, ext = os.path.splitext(filename_)
         output_filename = output_filename or os.path.join(folder, name+'_output'+ext)
 
         cv2.imwrite(output_filename, ti[0])
-        return output_filename
 
     def test_video(self, ):
         pass
@@ -221,7 +220,7 @@ def save_result(result_data, fname):
 ############################################################################
 ## test on the input test image
 ############################################################################
-def test(lane_agent, test_images, thresh = p.threshold_point, color = None):
+def test(lane_agent, test_images, thresh = p.threshold_point):
 
     result = lane_agent.predict_lanes_test(test_images)
     confidences, offsets, instances = result[-1]
@@ -234,10 +233,9 @@ def test(lane_agent, test_images, thresh = p.threshold_point, color = None):
 
     for i in range(num_batch):
         # test on test data set
-        # image = deepcopy(test_images[i])
-        image = test_images[i]
-        image = np.rollaxis(image, axis=2, start=0)
-        image = np.rollaxis(image, axis=2, start=0)*255.0
+        image = deepcopy(test_images[i])
+        image =  np.rollaxis(image, axis=2, start=0)
+        image =  np.rollaxis(image, axis=2, start=0)*255.0
         image = image.astype(np.uint8).copy()
 
         confidence = confidences[i].view(p.grid_y, p.grid_x).cpu().data.numpy()
@@ -258,17 +256,17 @@ def test(lane_agent, test_images, thresh = p.threshold_point, color = None):
 
         # sort points along y
         in_x, in_y = util.sort_along_y(in_x, in_y)
-        in_x, in_y = eliminate_out(in_x, in_y, confidence) #, deepcopy(image))
+        in_x, in_y = eliminate_out(in_x, in_y, confidence, deepcopy(image))
         in_x, in_y = util.sort_along_y(in_x, in_y)
         in_x, in_y = eliminate_fewer_points(in_x, in_y)
 
-        result_image = util.draw_points(in_x, in_y, image, color) #deepcopy(image))
+        result_image = util.draw_points(in_x, in_y, deepcopy(image))
 
         out_x.append(in_x)
         out_y.append(in_y)
         out_images.append(result_image)
 
-    return out_x, out_y, out_images
+    return out_x, out_y,  out_images
 
 ############################################################################
 ## post processing for eliminating outliers
@@ -279,8 +277,8 @@ def eliminate_out(sorted_x, sorted_y, confidence, image = None):
 
     for lane_x, lane_y in zip(sorted_x, sorted_y):
 
-        lane_x_along_y = np.array(lane_x) # deepcopy(lane_x))
-        lane_y_along_y = np.array(lane_y) # deepcopy(lane_y))
+        lane_x_along_y = np.array(deepcopy(lane_x))
+        lane_y_along_y = np.array(deepcopy(lane_y))
 
         ind = np.argsort(lane_x_along_y, axis=0)
         lane_x_along_x = np.take_along_axis(lane_x_along_y, ind, axis=0)
@@ -296,7 +294,7 @@ def eliminate_out(sorted_x, sorted_y, confidence, image = None):
         temp_x = []
         temp_y = []
         for start_point in starting_points:
-            temp_lane_x, temp_lane_y = generate_cluster(start_point, lane_x, lane_y) # , image)
+            temp_lane_x, temp_lane_y = generate_cluster(start_point, lane_x, lane_y, image)
             temp_x.append(temp_lane_x)
             temp_y.append(temp_lane_y)
 
@@ -335,7 +333,7 @@ def generate_cluster(start_point, lane_x, lane_y, image = None):
                 cluster_y.append(i[1])
             break
         for i in points:
-            num, shortest = util.get_num_along_point(lane_x, lane_y, point, i) # , image)
+            num, shortest = util.get_num_along_point(lane_x, lane_y, point, i, image)
             if max_num < num:
                 max_num = num
                 max_point = i
@@ -439,9 +437,6 @@ def arg_parser_setup():
     parser = argparse.ArgumentParser(description='Test PINet')
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--threshold', help='Threshold point in postprocessing, default value 0.81', type=float, default=0.81)
-    parser.add_argument('-c', '--color', help='color option', type=int)
-
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-f', '--filename', help='Input test case file absolute path. E.g. /Users/ben/...')
     group.add_argument('-d', '--directory', help='Input test case file absolute path. E.g. /Users/ben/...')
@@ -461,7 +456,7 @@ if __name__ == '__main__':
             output_filename = os.path.join(output_directory, b)
             if not os.path.exists(output_directory):
                 os.makedirs(output_directory)
-            tester.test_image(f, output_filename, threshold=args.threshold, color=args.color)
+            tester.test_image(f, output_filename)
     elif args.filename:
         #filename = '/Users/ben/Downloads/hk_road01.jpg'
         tester.test_image(args.filename)

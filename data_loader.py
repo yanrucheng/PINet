@@ -81,6 +81,7 @@ class Generator(object):
 
         self.size_train = len(self.train_data_two) + len(self.train_data_three) + len(self.train_data_four) + len(self.train_data_five)
 
+        return
         # load test set
         self.test_data = []
         with open(self.p.test_root_url+'test_tasks_0627.json') as f:
