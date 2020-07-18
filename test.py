@@ -56,7 +56,7 @@ class PINet_Tester:
 
         folder, filename_ = os.path.split(filename)
         name, ext = os.path.splitext(filename_)
-        output_filename = output_filename or os.path.join(folder, name+'_output'+ext)
+        output_filename = output_filename or os.path.join(folder, name+'_output.png')
 
         cv2.imwrite(output_filename, ti[0])
         return output_filename
