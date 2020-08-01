@@ -1,5 +1,6 @@
 # key points estimation and point instance segmentation approach for lane detection
 
+- 
 - Paper : key points estimation and point instance segmentation approach for lane detection
 - Paper Link : https://arxiv.org/abs/2002.06604
 - Author : Yeongmin Ko, Jiwon Jun, Donghwuy Ko, Moongu Jeon (Gwanju Institute of Science and Technology)
@@ -7,13 +8,10 @@
 - This repository is pytorch implement of the above paper. Our poposed method, PINet(Point Intance Network), combines key point estimation and point instance segmentation for lane detection. 
 
 ## Dependency
-- python ( We tested on python 2.7 )
-- pytorch ( We tested on pytorch 1.0.1 with GPU(RTX2080ti))
-- opencv
-- numpy
-- visdom (for visualization)
-- sklearn (for evaluation)
-- ujon (for evaluation)
+We recommend using Anaconda for easier environment mangement
+- $ git clone https://github.com/yanrucheng/PINet.git
+- $ cd <pinet directory>
+- $ conda env create -f pinet.yml
 
 ## Dataset
 This code is developed on tuSimple dataset. You can download the dataset from https://github.com/TuSimple/tusimple-benchmark/issues/3. We recommand to make below structure.
@@ -53,31 +51,20 @@ Finally, you can run "fix_dataset.py", and it will generate dataset according to
             
 ## Test
 We provide trained model, and it is saved in "savefile" directory. You can run "test.py" for testing, and it has some mode like following functions 
-- mode 0 : Visualize results on test set
-- mode 1 : Run the model on the given video. If you want to use this mode, enter your video path at line 63 in "test.py"
-- mode 2 : Run the model on the given image. If you want to use this mode, enter your image path at line 82 in "test.py"
-- mode 3 : Test the model on whole test set, and save result as json file.
+- $ conda activate pinet
+- $ python test.py -h
 
-You can change mode at line 22 in "parameters.py".
+Output:
+>>> usage: test.py [-h] [-t THRESHOLD] [-c COLOR] (-f FILENAME | -d DIRECTORY)
+>>> test.py: error: one of the arguments -f/--filename -d/--directory is required
 
-If you want to use other trained model, just change following 2 lines.
-```
-# In "parameters.py"
-line 13 : model_path = "<your model path>/"
-# In "test.py"
-line 42 : lane_agent.load_weights(<>, "tensor(<>)")
-```
+Test a single image
+- $ python test.py -f test.png
+The output will be saved as test_output.png
 
-If you run "test.py" by mode 3, it generates "test_result.json" file. You can evaluate it by running just "evaluation.py".
+Test a directory of images
+- $ python test.py -d inputs/
 
-Following three lines in "test.py" are for post-processing. If you do not want to use this post-processing, make these three lines comments.
-```
-# In "test.py"
-line 210 : in_x, in_y = eliminate_out(in_x, in_y, confidence, deepcopy(image))
-line 211 : in_x, in_y = util.sort_along_y(in_x, in_y)
-line 212 : in_x, in_y = eliminate_fewer_points(in_x, in_y)
-```
-You can get around 96.70% accuracy performance with the post-processing and 96.62% without the post-processing.
 
 ## Train
 If you want to train from scratch, make line 13 blank in "parameters.py", and run "train.py"
