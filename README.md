@@ -19,7 +19,7 @@ This is a 2020 MSc Project github repository. This project study, reimplement, t
 ## Dependency
 We recommend using Anaconda for easier environment mangement
 - $ git clone https://github.com/yanrucheng/PINet.git
-- $ cd <pinet directory>
+- $ cd pinet
 - $ conda env create -f pinet.yml
 
 ## Dataset
