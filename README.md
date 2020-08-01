@@ -1,9 +1,18 @@
-# key points estimation and point instance segmentation approach for lane detection
+# End-to-end Lane detection Based on Segmentation
+This is a 2020 MSc Project github repository. This project study, reimplement, test and analyze the PINet model proposed by Yeongmin Ko et al.
 
-- 
-- Paper : key points estimation and point instance segmentation approach for lane detection
-- Paper Link : https://arxiv.org/abs/2002.06604
-- Author : Yeongmin Ko, Jiwon Jun, Donghwuy Ko, Moongu Jeon (Gwanju Institute of Science and Technology)
+## What we have done?
+- Study and re-implement PINet for better **scalability, robustness and easier maintenance**
+- Using **multi-scale training and testing technique** to test the robustness of PINet
+- Test PINet with the challenging dataset - **CULane**
+- Build a **real-time** [traffic lane detection interface](http://pinet.yanrucheng.com)
+
+## Project Summary
+- Supervisor: Dr. P. Luo
+- Group Members: Cheng Yanru, Huang Jingxuan, Li Ling, Tong Li
+- Original Paper : key points estimation and point instance segmentation approach for lane detection
+- Original Paper Link : https://arxiv.org/abs/2002.06604
+- Original Author : Yeongmin Ko, Jiwon Jun, Donghwuy Ko, Moongu Jeon (Gwanju Institute of Science and Technology)
 
 - This repository is pytorch implement of the above paper. Our poposed method, PINet(Point Intance Network), combines key point estimation and point instance segmentation for lane detection. 
 
@@ -14,6 +23,7 @@ We recommend using Anaconda for easier environment mangement
 - $ conda env create -f pinet.yml
 
 ## Dataset
+### TuSimple
 This code is developed on tuSimple dataset. You can download the dataset from https://github.com/TuSimple/tusimple-benchmark/issues/3. We recommand to make below structure.
 
     dataset
@@ -48,7 +58,10 @@ line 55 : test_root_url="<tuSimple_dataset_path>/test_set/"
 ```
 
 Finally, you can run "fix_dataset.py", and it will generate dataset according to the number of lanes and save dataset in "dataset" directory. (We have uploaded dataset. You can use them.)
-            
+
+### CULane
+We also support           
+  
 ## Test
 We provide trained model, and it is saved in "savefile" directory. You can run "test.py" for testing, and it has some mode like following functions 
 - $ conda activate pinet
